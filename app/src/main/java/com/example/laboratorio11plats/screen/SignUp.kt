@@ -21,18 +21,21 @@ fun SignUpScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf("") }
 
     val authResult by authViewModel.authResult.observeAsState()
 
     authResult?.let {
         if (it.isSuccess) {
+            // Guardar los datos del usuario en la base de datos
+            authViewModel.saveUserProfile(firstName, lastName, dateOfBirth)
             // Navegar a la siguiente pantalla si el registro fue exitoso
             onSignUpSuccess()
         } else {
-            // Mostrar error si lo hay
             it.exceptionOrNull()?.message?.let { errorMessage ->
-                // Muestra el mensaje de error, por ejemplo usando un Snackbar
-                // Ejemplo: Snackbar { Text(errorMessage) }
+                // Mostrar mensaje de error
             }
         }
     }
@@ -45,29 +48,41 @@ fun SignUpScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         OutlinedTextField(
+            value = firstName,
+            onValueChange = { firstName = it },
+            label = { Text("First Name") },
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        )
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = { lastName = it },
+            label = { Text("Last Name") },
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        )
+        OutlinedTextField(
+            value = dateOfBirth,
+            onValueChange = { dateOfBirth = it },
+            label = { Text("Date of Birth") },
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        )
+        OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
         )
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
             visualTransformation = PasswordVisualTransformation()
         )
         Button(
             onClick = {
-                authViewModel.signUpAndSignIn(email, password)
+                authViewModel.signUp(email, password)
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
         ) {
             Text("Sign Up")
         }

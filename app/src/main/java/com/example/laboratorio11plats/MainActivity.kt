@@ -48,9 +48,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NavigationGraph(
-    navController: NavHostController,
-    authViewModel: AuthViewModel,
-    blogViewModel: BlogViewModel
+    navController: NavHostController = rememberNavController(),
+    authViewModel: AuthViewModel = AuthViewModel(),
+    blogViewModel: BlogViewModel = BlogViewModel()
 ) {
     val startDestination = Screen.HomeScreen.route // Iniciar siempre en HomeScreen para iniciar sesión o registrarse
 
@@ -90,16 +90,20 @@ fun NavigationGraph(
             PostScreen(
                 blogViewModel = blogViewModel,
                 onPostSuccess = {
-                    Log.d("PostScreen", "onPostSuccess called")
                     navController.navigate(Screen.PostsListScreen.route) {
                         popUpTo(Screen.PostScreen.route) { inclusive = true }
                     }
                 },
-                onNavigateToPostsList = { navController.navigate(Screen.PostsListScreen.route) }
+                onNavigateToPostsList = { navController.navigate(Screen.PostsListScreen.route) },
+                onNavigateToUserProfile = { navController.navigate(Screen.UserProfileScreen.route) } // Añadida la ruta del perfil
             )
         }
         composable(Screen.PostsListScreen.route) {
             PostsListScreen(blogViewModel = blogViewModel)
         }
+        composable(Screen.UserProfileScreen.route) {
+            UserProfileScreen(authViewModel = authViewModel)
+        }
     }
 }
+

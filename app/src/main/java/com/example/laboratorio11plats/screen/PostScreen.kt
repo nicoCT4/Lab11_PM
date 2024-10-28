@@ -17,7 +17,8 @@ import com.example.laboratorio11plats.viewmodel.BlogViewModel
 fun PostScreen(
     blogViewModel: BlogViewModel = viewModel(),
     onPostSuccess: () -> Unit,
-    onNavigateToPostsList: () -> Unit
+    onNavigateToPostsList: () -> Unit,
+    onNavigateToUserProfile: () -> Unit // Parámetro adicional para la navegación al perfil del usuario
 ) {
     var postText by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
@@ -86,9 +87,23 @@ fun PostScreen(
 
         Button(
             onClick = onNavigateToPostsList,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         ) {
             Text("View Posts")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Botón para navegar a la pantalla del perfil del usuario
+        Button(
+            onClick = onNavigateToUserProfile,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text("View Profile")
         }
     }
 }
