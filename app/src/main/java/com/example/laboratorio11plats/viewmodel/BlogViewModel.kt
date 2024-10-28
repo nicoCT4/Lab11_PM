@@ -5,12 +5,14 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class BlogViewModel : ViewModel() {
 
@@ -26,18 +28,43 @@ class BlogViewModel : ViewModel() {
     fun getPosts() {
         val userId = currentUser?.uid ?: return
 
-        database.child("posts").child(userId).get()
-            .addOnSuccessListener { snapshot ->
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val snapshot = database.child("posts").child(userId).get().await()
                 val posts = snapshot.children.mapNotNull { it.getValue(Post::class.java) }
-                _postsLiveData.value = posts
+                withContext(Dispatchers.Main) {
+                    _postsLiveData.value = posts
+                }
+            } catch (e: Exception) {
+                Log.d("BlogViewModel", "Failed to retrieve posts: ${e.message}")
             }
-            .addOnFailureListener { error ->
-                Log.d("BlogViewModel", "Failed to retrieve posts: ${error.message}")
-            }
+        }
     }
 
-    // Crear publicación (implementación de ejemplo usando coroutines)
+    // Crear publicación
     fun createPost(postText: String, imageUri: Uri?, onPostSuccess: () -> Unit) {
-        // Implementación como discutido anteriormente usando coroutines...
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val userId = currentUser?.uid ?: return@launch
+                val postId = database.child("posts").child(userId).push().key ?: return@launch
+
+                var imageUrl = ""
+                if (imageUri != null) {
+                    val storageRef = storage.child("posts/$userId/$postId")
+                    storageRef.putFile(imageUri).await()
+                    imageUrl = storageRef.downloadUrl.await().toString()
+                }
+
+                val post = Post(postText, imageUrl, System.currentTimeMillis())
+                database.child("posts").child(userId).child(postId).setValue(post).await()
+
+                // Cambiar al hilo principal para actualizar la UI
+                withContext(Dispatchers.Main) {
+                    onPostSuccess()
+                }
+            } catch (e: Exception) {
+                Log.e("BlogViewModel", "Error creating post: ${e.message}")
+            }
+        }
     }
 }
