@@ -1,47 +1,92 @@
 package com.example.laboratorio11plats
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.laboratorio11plats.ui.theme.Laboratorio11platsTheme
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.laboratorio11plats.screen.*
+import com.example.laboratorio11plats.viewmodel.AuthViewModel
+import com.example.laboratorio11plats.viewmodel.BlogViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            Laboratorio11platsTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            val navController = rememberNavController()
+            val authViewModel = AuthViewModel() // Instancia del ViewModel de autenticación
+            val blogViewModel = BlogViewModel() // Instancia del ViewModel de publicaciones
+
+            NavigationGraph(
+                navController = navController,
+                authViewModel = authViewModel,
+                blogViewModel = blogViewModel
+            )
         }
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
 
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    Laboratorio11platsTheme {
-        Greeting("Android")
+fun NavigationGraph(
+    navController: NavHostController,
+    authViewModel: AuthViewModel,
+    blogViewModel: BlogViewModel
+) {
+    val startDestination = Screen.HomeScreen.route // Iniciar siempre en HomeScreen para iniciar sesión o registrarse
+
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable(Screen.SignInScreen.route) {
+            SignInScreen(
+                authViewModel = authViewModel,
+                onNavigateToSignUp = { navController.navigate(Screen.SignUpScreen.route) },
+                onSignInSuccess = {
+                    navController.navigate(Screen.PostScreen.route) {
+                        popUpTo(Screen.SignInScreen.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.SignUpScreen.route) {
+            SignUpScreen(
+                authViewModel = authViewModel,
+                onNavigateToLogin = { navController.navigate(Screen.SignInScreen.route) },
+                onSignUpSuccess = {
+                    navController.navigate(Screen.PostScreen.route) {
+                        popUpTo(Screen.SignUpScreen.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.HomeScreen.route) {
+            HomeScreen(
+                onNavigateToSignIn = { navController.navigate(Screen.SignInScreen.route) },
+                onNavigateToSignUp = { navController.navigate(Screen.SignUpScreen.route) }
+            )
+        }
+        composable(Screen.PostScreen.route) {
+            PostScreen(
+                blogViewModel = blogViewModel,
+                onPostSuccess = {
+                    Log.d("PostScreen", "onPostSuccess called")
+                    navController.navigate(Screen.PostsListScreen.route) {
+                        popUpTo(Screen.PostScreen.route) { inclusive = true }
+                    }
+                },
+                onNavigateToPostsList = { navController.navigate(Screen.PostsListScreen.route) }
+            )
+        }
+        composable(Screen.PostsListScreen.route) {
+            PostsListScreen(blogViewModel = blogViewModel)
+        }
     }
 }
+
+
