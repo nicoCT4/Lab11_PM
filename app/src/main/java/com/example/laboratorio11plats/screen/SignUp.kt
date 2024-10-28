@@ -32,6 +32,7 @@ fun SignUpScreen(
             // Mostrar error si lo hay
             it.exceptionOrNull()?.message?.let { errorMessage ->
                 // Muestra el mensaje de error, por ejemplo usando un Snackbar
+                // Ejemplo: Snackbar { Text(errorMessage) }
             }
         }
     }
@@ -47,20 +48,26 @@ fun SignUpScreen(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         )
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             visualTransformation = PasswordVisualTransformation()
         )
         Button(
             onClick = {
-                authViewModel.signUp(email, password)
+                authViewModel.signUpAndSignIn(email, password)
             },
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {
             Text("Sign Up")
         }
@@ -71,4 +78,3 @@ fun SignUpScreen(
         )
     }
 }
-

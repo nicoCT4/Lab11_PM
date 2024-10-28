@@ -25,16 +25,20 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signUp(email: String, password: String) {
-        auth.createUserWithEmailAndPassword(email, password)
+        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val user = auth.currentUser
+                    // Usuario registrado con éxito, ahora puedes obtener el usuario actual
+                    val user = FirebaseAuth.getInstance().currentUser
+                    // Aquí podrías navegar a la siguiente pantalla o actualizar el LiveData correspondiente
                     _authResult.value = Result.success(user)
                 } else {
-                    _authResult.value = Result.failure(task.exception ?: Exception("Error desconocido"))
+                    // Manejar error de registro
+                    _authResult.value = Result.failure(task.exception ?: Exception("Unknown error"))
                 }
             }
     }
+
 
     fun signIn(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password)
@@ -47,6 +51,26 @@ class AuthViewModel : ViewModel() {
                 }
             }
     }
+
+    fun signUpAndSignIn(email: String, password: String) {
+        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    // Usuario registrado con éxito
+                    FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { signInTask ->
+                            if (signInTask.isSuccessful) {
+                                _authResult.value = Result.success(FirebaseAuth.getInstance().currentUser)
+                            } else {
+                                _authResult.value = Result.failure(signInTask.exception ?: Exception("Unknown error"))
+                            }
+                        }
+                } else {
+                    _authResult.value = Result.failure(task.exception ?: Exception("Unknown error"))
+                }
+            }
+    }
+
 }
 
 

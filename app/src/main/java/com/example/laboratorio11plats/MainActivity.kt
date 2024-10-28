@@ -12,10 +12,26 @@ import androidx.navigation.compose.rememberNavController
 import com.example.laboratorio11plats.screen.*
 import com.example.laboratorio11plats.viewmodel.AuthViewModel
 import com.example.laboratorio11plats.viewmodel.BlogViewModel
+import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializa Firebase y Firebase App Check
+        FirebaseApp.initializeApp(this)
+
+        // Configuración de Firebase App Check para proteger la app
+        val firebaseAppCheck = FirebaseAppCheck.getInstance()
+        firebaseAppCheck.installAppCheckProviderFactory(
+            PlayIntegrityAppCheckProviderFactory.getInstance()
+        )
+
+        // Configura para que Firebase renueve automáticamente los tokens de App Check
+        firebaseAppCheck.setTokenAutoRefreshEnabled(true)
+
         setContent {
             val navController = rememberNavController()
             val authViewModel = AuthViewModel() // Instancia del ViewModel de autenticación
@@ -29,7 +45,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 
 @Composable
 fun NavigationGraph(
@@ -88,5 +103,3 @@ fun NavigationGraph(
         }
     }
 }
-
-

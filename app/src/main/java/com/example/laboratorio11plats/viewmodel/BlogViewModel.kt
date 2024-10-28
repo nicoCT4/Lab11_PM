@@ -5,20 +5,18 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 
 class BlogViewModel : ViewModel() {
 
     private val database = FirebaseDatabase.getInstance().reference
     private val storage = FirebaseStorage.getInstance().reference
-    private val currentUser = FirebaseAuth.getInstance().currentUser
+    private val auth = FirebaseAuth.getInstance()
 
     // LiveData para almacenar las publicaciones
     private val _postsLiveData = MutableLiveData<List<Post>>()
@@ -26,45 +24,52 @@ class BlogViewModel : ViewModel() {
 
     // Obtener publicaciones del usuario actual
     fun getPosts() {
-        val userId = currentUser?.uid ?: return
+        val userId = auth.currentUser?.uid ?: return
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val snapshot = database.child("posts").child(userId).get().await()
+        database.child("posts").child(userId).get()
+            .addOnSuccessListener { snapshot ->
                 val posts = snapshot.children.mapNotNull { it.getValue(Post::class.java) }
-                withContext(Dispatchers.Main) {
-                    _postsLiveData.value = posts
-                }
-            } catch (e: Exception) {
-                Log.d("BlogViewModel", "Failed to retrieve posts: ${e.message}")
+                _postsLiveData.value = posts
             }
-        }
+            .addOnFailureListener { error ->
+                Log.d("BlogViewModel", "Failed to retrieve posts: \${error.message}")
+            }
     }
 
-    // Crear publicación
-    fun createPost(postText: String, imageUri: Uri?, onPostSuccess: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val userId = currentUser?.uid ?: return@launch
-                val postId = database.child("posts").child(userId).push().key ?: return@launch
+    // Crear publicación (implementación de ejemplo usando coroutines)
+    fun createPost(postText: String, imageUri: Uri?, onPostSuccess: () -> Unit, onPostFailure: (Exception) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            // Si el usuario no está autenticado, no se puede crear el post
+            onPostFailure(Exception("User is not authenticated. Please log in."))
+            return
+        }
 
-                var imageUrl = ""
+        val userId = currentUser.uid
+        val postId = database.child("posts").child(userId).push().key ?: return
+        val post = Post(postText = postText, imageUrl = "")
+
+        // Publicación del texto del post primero
+        database.child("posts").child(userId).child(postId).setValue(post)
+            .addOnSuccessListener {
                 if (imageUri != null) {
-                    val storageRef = storage.child("posts/$userId/$postId")
-                    storageRef.putFile(imageUri).await()
-                    imageUrl = storageRef.downloadUrl.await().toString()
-                }
-
-                val post = Post(postText, imageUrl, System.currentTimeMillis())
-                database.child("posts").child(userId).child(postId).setValue(post).await()
-
-                // Cambiar al hilo principal para actualizar la UI
-                withContext(Dispatchers.Main) {
+                    // Solo sube la imagen si existe `imageUri`
+                    val imageRef = storage.child("images/\$postId")
+                    imageRef.putFile(imageUri)
+                        .addOnSuccessListener { taskSnapshot ->
+                            taskSnapshot.metadata?.reference?.downloadUrl?.addOnSuccessListener { uri ->
+                                database.child("posts").child(userId).child(postId).child("imageUrl").setValue(uri.toString())
+                                    .addOnSuccessListener { onPostSuccess() }
+                                    .addOnFailureListener { onPostFailure(it) }
+                            }
+                        }
+                        .addOnFailureListener { onPostFailure(it) }
+                } else {
+                    // Si no hay imagen, simplemente concluye el post exitoso
                     onPostSuccess()
                 }
-            } catch (e: Exception) {
-                Log.e("BlogViewModel", "Error creating post: ${e.message}")
             }
-        }
+            .addOnFailureListener { onPostFailure(it) }
     }
 }
+
